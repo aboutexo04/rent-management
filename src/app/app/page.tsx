@@ -1,5 +1,9 @@
 import { Suspense } from "react";
+import { connection } from "next/server";
 import { createClient } from "@/lib/supabase/server";
+
+/** 세션 읽기 + Auth 토큰 만료 검사(Date.now) → 요청 시점에만 렌더 */
+export const instant = false;
 
 export default function AppHomePage() {
   return (
@@ -10,6 +14,7 @@ export default function AppHomePage() {
 }
 
 async function AppHomeContent() {
+  await connection();
   const supabase = await createClient();
   const { data } = await supabase.auth.getClaims();
   const email =
