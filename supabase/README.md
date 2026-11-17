@@ -19,7 +19,7 @@ cp .env.example .env.local
 1. Dashboard → **SQL Editor**
 2. `migrations/20261116000000_init.sql` 전체 붙여넣기 → Run
 3. 이후 추가 마이그레이션도 순서대로 실행  
-   (예: `20261117000000_add_management_fee.sql`)
+   (예: `20261117000000_add_management_fee.sql`, `20261118000000_law_rag.sql`)
 
 **방법 B — CLI**
 
@@ -39,9 +39,10 @@ npx supabase db push
 ## 4. 확인 체크리스트
 
 - [ ] Table Editor에 `properties`, `leases`, `payments`, `events`, `attachments`, `drafts`, `law_chunks`
+- [ ] `law_chunks`에 법령 시드 행 + `match_law_chunks` 함수 (2주차 SQL)
 - [ ] 각 테이블 RLS Enabled
 - [ ] Storage에 `contracts`, `event-attachments` (private)
-- [ ] `.env.local`에 URL · anon key 입력 후 `npm run dev`
+- [ ] `.env.local`에 URL · anon key · `ANTHROPIC_API_KEY` 입력 후 `npm run dev`
 
 ## Storage 경로 규칙
 

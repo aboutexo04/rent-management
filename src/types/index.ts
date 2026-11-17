@@ -23,3 +23,9 @@ export const EVENT_TAGS: EventTag[] = [
   "연락 기록",
   "기타",
 ];
+
+export const DRAFT_KINDS: DraftKind[] = [
+  "무단전대_소명요청",
+  "갱신거절_통지",
+  "연체차임_독촉",
+];

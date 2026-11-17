@@ -8,6 +8,11 @@ import {
   EventTimeline,
   type TimelineEvent,
 } from "@/components/event-timeline";
+import {
+  DraftPanel,
+  type DraftEventOption,
+  type DraftListItem,
+} from "@/components/draft-panel";
 import { canonicalizeEventTag } from "@/lib/events/tags";
 
 export const instant = false;
@@ -35,20 +40,26 @@ export default async function LeaseDetailPage({
     notFound();
   }
 
-  const [{ data: payments }, { data: eventRows }] = await Promise.all([
-    supabase
-      .from("payments")
-      .select("period_month, paid_on, amount")
-      .eq("lease_id", id)
-      .order("paid_on", { ascending: true }),
-    supabase
-      .from("events")
-      .select(
-        "id, occurred_on, tag, memo, attachments(id, file_name, storage_path, content_type)",
-      )
-      .eq("lease_id", id)
-      .order("occurred_on", { ascending: false }),
-  ]);
+  const [{ data: payments }, { data: eventRows }, { data: draftRows }] =
+    await Promise.all([
+      supabase
+        .from("payments")
+        .select("period_month, paid_on, amount")
+        .eq("lease_id", id)
+        .order("paid_on", { ascending: true }),
+      supabase
+        .from("events")
+        .select(
+          "id, occurred_on, tag, memo, attachments(id, file_name, storage_path, content_type)",
+        )
+        .eq("lease_id", id)
+        .order("occurred_on", { ascending: false }),
+      supabase
+        .from("drafts")
+        .select("id, kind, body, cited_articles, created_at, sent_on")
+        .eq("lease_id", id)
+        .order("created_at", { ascending: false }),
+    ]);
 
   const events: TimelineEvent[] = (eventRows ?? []).map((row) => ({
     id: row.id,
@@ -56,6 +67,22 @@ export default async function LeaseDetailPage({
     tag: canonicalizeEventTag(row.tag),
     memo: row.memo,
     attachments: Array.isArray(row.attachments) ? row.attachments : [],
+  }));
+
+  const draftEvents: DraftEventOption[] = events.map((e) => ({
+    id: e.id,
+    occurred_on: e.occurred_on,
+    tag: e.tag,
+    memo: e.memo,
+  }));
+
+  const drafts: DraftListItem[] = (draftRows ?? []).map((d) => ({
+    id: d.id,
+    kind: d.kind,
+    body: d.body,
+    cited_articles: d.cited_articles ?? [],
+    created_at: d.created_at,
+    sent_on: d.sent_on,
   }));
 
   const managementFee = lease.management_fee ?? 0;
@@ -134,6 +161,12 @@ export default async function LeaseDetailPage({
       <F2Dashboard lease={lease} payments={payments ?? []} />
 
       <EventTimeline leaseId={lease.id} events={events} />
+
+      <DraftPanel
+        leaseId={lease.id}
+        events={draftEvents}
+        drafts={drafts}
+      />
     </main>
   );
 }
