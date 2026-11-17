@@ -2,7 +2,8 @@ import { Suspense } from "react";
 import { connection } from "next/server";
 import Link from "next/link";
 import { createClient } from "@/lib/supabase/server";
-import { formatWon, monthlyCharge } from "@/lib/leases/validate";
+import { monthlyCharge } from "@/lib/leases/validate";
+import { LeaseList } from "@/components/lease-list";
 
 /** 세션 읽기 + Auth 토큰 만료 검사(Date.now) → 요청 시점에만 렌더 */
 export const instant = false;
@@ -28,6 +29,17 @@ async function AppHomeContent() {
       "id, room, tenant_name, current_end_date, monthly_rent, management_fee, created_at",
     )
     .order("created_at", { ascending: false });
+
+  const items = (leases ?? []).map((lease) => ({
+    id: lease.id,
+    room: lease.room,
+    tenant_name: lease.tenant_name,
+    current_end_date: lease.current_end_date,
+    monthlyCharge: monthlyCharge(
+      lease.monthly_rent,
+      lease.management_fee ?? 0,
+    ),
+  }));
 
   return (
     <main className="flex flex-col gap-6">
@@ -59,38 +71,8 @@ async function AppHomeContent() {
           </Link>
         </div>
 
-        {!leases || leases.length === 0 ? (
-          <p className="text-sm text-zinc-500">
-            아직 저장된 계약이 없습니다. 계약서를 올려 등록해 보세요.
-          </p>
-        ) : (
-          <ul className="divide-y divide-zinc-200 rounded border border-zinc-200 bg-white">
-            {leases.map((lease) => (
-              <li key={lease.id}>
-                <Link
-                  href={`/app/leases/${lease.id}`}
-                  className="flex flex-col gap-0.5 px-3 py-3 hover:bg-zinc-50 sm:flex-row sm:items-center sm:justify-between"
-                >
-                  <span className="text-sm font-medium text-zinc-900">
-                    {lease.room} · {lease.tenant_name}
-                  </span>
-                  <span className="text-xs text-zinc-500">
-                    만료 {lease.current_end_date} · 월 차임{" "}
-                    {formatWon(
-                      monthlyCharge(
-                        lease.monthly_rent,
-                        lease.management_fee ?? 0,
-                      ),
-                    )}
-                  </span>
-                </Link>
-              </li>
-            ))}
-          </ul>
-        )}
+        <LeaseList leases={items} />
       </section>
-
-      <p className="text-sm text-zinc-400">다음: F3 사건 타임라인 (D5)</p>
     </main>
   );
 }
