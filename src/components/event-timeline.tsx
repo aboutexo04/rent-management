@@ -9,7 +9,11 @@ import {
   deleteEventAction,
 } from "@/app/actions/events";
 import { EVENT_TAGS, type EventTag } from "@/types";
-import { lawLinkForTag } from "@/lib/events/tags";
+import {
+  canonicalizeEventTag,
+  lawLinkForTag,
+  tagsEqual,
+} from "@/lib/events/tags";
 
 export type TimelineAttachment = {
   id: string;
@@ -39,9 +43,25 @@ export function EventTimeline({ leaseId, events }: EventTimelineProps) {
   const [busyId, setBusyId] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
 
+  const tagCounts = useMemo(() => {
+    const counts = Object.fromEntries(EVENT_TAGS.map((t) => [t, 0])) as Record<
+      EventTag,
+      number
+    >;
+    for (const e of events) {
+      const tag = canonicalizeEventTag(e.tag);
+      if ((EVENT_TAGS as string[]).includes(tag)) {
+        counts[tag as EventTag] += 1;
+      }
+    }
+    return counts;
+  }, [events]);
+
   const filtered = useMemo(() => {
     const list =
-      filter === "all" ? events : events.filter((e) => e.tag === filter);
+      filter === "all"
+        ? events
+        : events.filter((e) => tagsEqual(e.tag, filter));
     return [...list].sort((a, b) =>
       a.occurred_on < b.occurred_on ? 1 : a.occurred_on > b.occurred_on ? -1 : 0,
     );
@@ -106,14 +126,14 @@ export function EventTimeline({ leaseId, events }: EventTimelineProps) {
         <FilterChip
           active={filter === "all"}
           onClick={() => setFilter("all")}
-          label="전체"
+          label={`전체 (${events.length})`}
         />
         {EVENT_TAGS.map((tag) => (
           <FilterChip
             key={tag}
             active={filter === tag}
             onClick={() => setFilter(tag)}
-            label={tag}
+            label={`${tag} (${tagCounts[tag]})`}
           />
         ))}
       </div>

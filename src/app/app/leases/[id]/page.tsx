@@ -8,6 +8,7 @@ import {
   EventTimeline,
   type TimelineEvent,
 } from "@/components/event-timeline";
+import { canonicalizeEventTag } from "@/lib/events/tags";
 
 export const instant = false;
 
@@ -52,7 +53,7 @@ export default async function LeaseDetailPage({
   const events: TimelineEvent[] = (eventRows ?? []).map((row) => ({
     id: row.id,
     occurred_on: row.occurred_on,
-    tag: row.tag,
+    tag: canonicalizeEventTag(row.tag),
     memo: row.memo,
     attachments: Array.isArray(row.attachments) ? row.attachments : [],
   }));

@@ -35,7 +35,6 @@ export function PaymentForm({ leaseId }: PaymentFormProps) {
         return;
       }
       setAmount("");
-      // revalidatePath 후 같은 페이지 데이터 갱신
       router.refresh();
     } catch {
       setError("저장 중 오류가 발생했습니다.");

@@ -42,9 +42,30 @@ export const EVENT_TAG_LAW_LINKS: TagLawLink[] = [
 ];
 
 export function lawLinkForTag(tag: string): TagLawLink | undefined {
-  return EVENT_TAG_LAW_LINKS.find((l) => l.tag === tag);
+  const canonical = canonicalizeEventTag(tag);
+  return EVENT_TAG_LAW_LINKS.find((l) => l.tag === canonical);
+}
+
+/** 한글 NFD/NFC·공백 차이로 필터 불일치가 나지 않게 정규화 */
+export function normalizeTagText(value: string): string {
+  return value.trim().normalize("NFC").replace(/\s+/g, " ");
+}
+
+export function canonicalizeEventTag(value: string): string {
+  const normalized = normalizeTagText(value);
+  const exact = EVENT_TAGS.find((t) => t === normalized);
+  if (exact) return exact;
+  const compact = normalized.replace(/\s+/g, "");
+  return (
+    EVENT_TAGS.find((t) => t.replace(/\s+/g, "") === compact) ?? normalized
+  );
+}
+
+export function tagsEqual(a: string, b: string): boolean {
+  return canonicalizeEventTag(a) === canonicalizeEventTag(b);
 }
 
 export function isEventTag(value: string): value is EventTag {
-  return (EVENT_TAGS as string[]).includes(value);
+  const canonical = canonicalizeEventTag(value);
+  return (EVENT_TAGS as string[]).includes(canonical);
 }

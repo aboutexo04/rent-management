@@ -1,8 +1,7 @@
 "use server";
 
-import { revalidatePath } from "next/cache";
 import { createClient } from "@/lib/supabase/server";
-import { isEventTag } from "@/lib/events/tags";
+import { canonicalizeEventTag, isEventTag } from "@/lib/events/tags";
 import { STORAGE_BUCKETS } from "@/lib/supabase/storage";
 
 export type EventActionResult =
@@ -41,7 +40,8 @@ export async function createEventAction(input: {
   if (!/^\d{4}-\d{2}-\d{2}$/.test(input.occurredOn)) {
     return { ok: false, error: "날짜를 확인하세요." };
   }
-  if (!isEventTag(input.tag)) {
+  const tag = canonicalizeEventTag(input.tag);
+  if (!isEventTag(tag)) {
     return { ok: false, error: "유형 태그가 올바르지 않습니다." };
   }
 
@@ -54,17 +54,23 @@ export async function createEventAction(input: {
       user_id: auth.user.id,
       lease_id: auth.leaseId,
       occurred_on: input.occurredOn,
-      tag: input.tag,
+      tag,
       memo: input.memo.trim() || null,
     })
     .select("id")
     .single();
 
   if (error || !data) {
-    return { ok: false, error: "사건 기록을 저장하지 못했습니다." };
+    return {
+      ok: false,
+      error: error?.message
+        ? `사건 기록을 저장하지 못했습니다. (${error.message})`
+        : "사건 기록을 저장하지 못했습니다.",
+    };
   }
 
-  revalidatePath(`/app/leases/${input.leaseId}`);
+  // revalidatePath는 이 라우트에서 응답이 멈추는 경우가 있어
+  // 클라이언트 router.refresh()로만 갱신합니다.
   return { ok: true, eventId: data.id };
 }
 
@@ -78,7 +84,8 @@ export async function updateEventAction(input: {
   if (!/^\d{4}-\d{2}-\d{2}$/.test(input.occurredOn)) {
     return { ok: false, error: "날짜를 확인하세요." };
   }
-  if (!isEventTag(input.tag)) {
+  const tag = canonicalizeEventTag(input.tag);
+  if (!isEventTag(tag)) {
     return { ok: false, error: "유형 태그가 올바르지 않습니다." };
   }
 
@@ -89,7 +96,7 @@ export async function updateEventAction(input: {
     .from("events")
     .update({
       occurred_on: input.occurredOn,
-      tag: input.tag,
+      tag,
       memo: input.memo.trim() || null,
     })
     .eq("id", input.eventId)
@@ -98,10 +105,14 @@ export async function updateEventAction(input: {
     .select("id");
 
   if (error || !data?.length) {
-    return { ok: false, error: "사건 기록을 수정하지 못했습니다." };
+    return {
+      ok: false,
+      error: error?.message
+        ? `사건 기록을 수정하지 못했습니다. (${error.message})`
+        : "사건 기록을 수정하지 못했습니다.",
+    };
   }
 
-  revalidatePath(`/app/leases/${input.leaseId}`);
   return { ok: true, eventId: data[0].id };
 }
 
@@ -138,10 +149,12 @@ export async function deleteEventAction(input: {
     .eq("lease_id", auth.leaseId);
 
   if (error) {
-    return { ok: false, error: "사건 기록을 삭제하지 못했습니다." };
+    return {
+      ok: false,
+      error: `사건 기록을 삭제하지 못했습니다. (${error.message})`,
+    };
   }
 
-  revalidatePath(`/app/leases/${input.leaseId}`);
   return { ok: true };
 }
 
@@ -174,9 +187,11 @@ export async function deleteAttachmentAction(input: {
     .eq("user_id", auth.user.id);
 
   if (error) {
-    return { ok: false, error: "첨부를 삭제하지 못했습니다." };
+    return {
+      ok: false,
+      error: `첨부를 삭제하지 못했습니다. (${error.message})`,
+    };
   }
 
-  revalidatePath(`/app/leases/${input.leaseId}`);
   return { ok: true };
 }

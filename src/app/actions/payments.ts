@@ -1,6 +1,5 @@
 "use server";
 
-import { revalidatePath } from "next/cache";
 import { createClient } from "@/lib/supabase/server";
 
 export type SavePaymentResult =
@@ -58,9 +57,12 @@ export async function addPaymentAction(input: {
   });
 
   if (error) {
-    return { ok: false, error: "납부 기록을 저장하지 못했습니다." };
+    return {
+      ok: false,
+      error: `납부 기록을 저장하지 못했습니다. (${error.message})`,
+    };
   }
 
-  revalidatePath(`/app/leases/${input.leaseId}`);
+  // revalidatePath 대신 클라이언트 router.refresh()로 갱신
   return { ok: true };
 }
