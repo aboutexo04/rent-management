@@ -18,6 +18,8 @@ cp .env.example .env.local
 
 1. Dashboard → **SQL Editor**
 2. `migrations/20261116000000_init.sql` 전체 붙여넣기 → Run
+3. 이후 추가 마이그레이션도 순서대로 실행  
+   (예: `20261117000000_add_management_fee.sql`)
 
 **방법 B — CLI**
 

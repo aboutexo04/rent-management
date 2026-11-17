@@ -2,7 +2,7 @@ import { connection } from "next/server";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
-import { formatWon } from "@/lib/leases/validate";
+import { formatWon, monthlyCharge, vatOf } from "@/lib/leases/validate";
 import { F2Dashboard } from "@/components/f2-dashboard";
 
 export const instant = false;
@@ -21,7 +21,7 @@ export default async function LeaseDetailPage({
   const { data: lease, error } = await supabase
     .from("leases")
     .select(
-      "id, room, tenant_name, first_contract_date, current_start_date, current_end_date, deposit, monthly_rent, payment_day, special_terms, contract_storage_path, created_at",
+      "id, room, tenant_name, first_contract_date, current_start_date, current_end_date, deposit, monthly_rent, management_fee, payment_day, special_terms, contract_storage_path, created_at",
     )
     .eq("id", id)
     .maybeSingle();
@@ -36,6 +36,10 @@ export default async function LeaseDetailPage({
     .eq("lease_id", id)
     .order("paid_on", { ascending: true });
 
+  const managementFee = lease.management_fee ?? 0;
+  const supply = lease.monthly_rent + managementFee;
+  const charge = monthlyCharge(lease.monthly_rent, managementFee);
+
   const rows: { label: string; value: string }[] = [
     { label: "호실", value: lease.room },
     { label: "임차인", value: lease.tenant_name },
@@ -43,7 +47,20 @@ export default async function LeaseDetailPage({
     { label: "현재 계약 시작일", value: lease.current_start_date },
     { label: "현재 계약 만료일", value: lease.current_end_date },
     { label: "보증금", value: formatWon(lease.deposit) },
-    { label: "월 차임", value: formatWon(lease.monthly_rent) },
+    { label: "월 임대료", value: formatWon(lease.monthly_rent) },
+    { label: "월 관리비", value: formatWon(managementFee) },
+    {
+      label: "공급가액 합계",
+      value: formatWon(supply),
+    },
+    {
+      label: "부가세(10%)",
+      value: formatWon(vatOf(supply)),
+    },
+    {
+      label: "월 차임(합산)",
+      value: `${formatWon(charge)} (연체 계산 기준, 부가세 포함)`,
+    },
     { label: "납부일", value: `매월 ${lease.payment_day}일` },
     {
       label: "특약",

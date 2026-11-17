@@ -48,6 +48,7 @@ export type Database = {
           current_end_date: string;
           deposit: number;
           monthly_rent: number;
+          management_fee: number;
           payment_day: number;
           special_terms: string | null;
           contract_storage_path: string | null;
@@ -65,6 +66,7 @@ export type Database = {
           current_end_date: string;
           deposit: number;
           monthly_rent: number;
+          management_fee?: number;
           payment_day: number;
           special_terms?: string | null;
           contract_storage_path?: string | null;
@@ -82,6 +84,7 @@ export type Database = {
           current_end_date?: string;
           deposit?: number;
           monthly_rent?: number;
+          management_fee?: number;
           payment_day?: number;
           special_terms?: string | null;
           contract_storage_path?: string | null;

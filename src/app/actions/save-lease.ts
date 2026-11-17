@@ -88,6 +88,7 @@ export async function saveLeaseAction(input: {
       current_end_date: validated.data.currentEndDate,
       deposit: validated.data.deposit,
       monthly_rent: validated.data.monthlyRent,
+      management_fee: validated.data.managementFee,
       payment_day: validated.data.paymentDay,
       special_terms: validated.data.specialTerms,
       contract_storage_path: path,
@@ -133,6 +134,7 @@ export async function updateLeaseAction(input: {
       current_end_date: validated.data.currentEndDate,
       deposit: validated.data.deposit,
       monthly_rent: validated.data.monthlyRent,
+      management_fee: validated.data.managementFee,
       payment_day: validated.data.paymentDay,
       special_terms: validated.data.specialTerms,
     })

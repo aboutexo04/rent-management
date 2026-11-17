@@ -8,13 +8,14 @@ export type ValidatedLeaseInput = {
   currentEndDate: string;
   deposit: number;
   monthlyRent: number;
+  managementFee: number;
   paymentDay: number;
   specialTerms: string | null;
 };
 
 const DATE_RE = /^\d{4}-\d{2}-\d{2}$/;
 
-function parseMoney(raw: string, label: string): number | string {
+function parseMoneyRequired(raw: string, label: string): number | string {
   const digits = raw.replace(/[^\d]/g, "");
   if (!digits) return `${label}을(를) 입력하세요.`;
   const n = Number(digits);
@@ -22,6 +23,33 @@ function parseMoney(raw: string, label: string): number | string {
     return `${label}이(가) 올바르지 않습니다.`;
   }
   return n;
+}
+
+/** 비어 있으면 0 */
+function parseMoneyOptional(raw: string, label: string): number | string {
+  const trimmed = raw.trim();
+  if (!trimmed) return 0;
+  const digits = trimmed.replace(/[^\d]/g, "");
+  if (!digits) return 0;
+  const n = Number(digits);
+  if (!Number.isSafeInteger(n) || n < 0) {
+    return `${label}이(가) 올바르지 않습니다.`;
+  }
+  return n;
+}
+
+/** 공급가액에 대한 부가세(10%). 원 미만은 버림. */
+export function vatOf(supply: number): number {
+  return Math.floor(supply * 0.1);
+}
+
+/**
+ * F2 연체·3기 차임 기준 월 차임.
+ * (월 임대료 + 월 관리비) + 부가세 10%
+ */
+export function monthlyCharge(rent: number, managementFee: number): number {
+  const supply = rent + managementFee;
+  return supply + vatOf(supply);
 }
 
 export function validateLeaseForm(
@@ -46,10 +74,14 @@ export function validateLeaseForm(
     return { ok: false, error: "만료일은 시작일 이후여야 합니다." };
   }
 
-  const deposit = parseMoney(values.deposit, "보증금");
+  const deposit = parseMoneyRequired(values.deposit, "보증금");
   if (typeof deposit === "string") return { ok: false, error: deposit };
-  const monthlyRent = parseMoney(values.monthlyRent, "월 차임");
+  const monthlyRent = parseMoneyRequired(values.monthlyRent, "월 임대료");
   if (typeof monthlyRent === "string") return { ok: false, error: monthlyRent };
+  const managementFee = parseMoneyOptional(values.managementFee, "월 관리비");
+  if (typeof managementFee === "string") {
+    return { ok: false, error: managementFee };
+  }
 
   const day = Number(values.paymentDay);
   if (!Number.isInteger(day) || day < 1 || day > 31) {
@@ -68,6 +100,7 @@ export function validateLeaseForm(
       currentEndDate: values.currentEndDate,
       deposit,
       monthlyRent,
+      managementFee,
       paymentDay: day,
       specialTerms: special || null,
     },

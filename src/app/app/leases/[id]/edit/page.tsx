@@ -18,7 +18,7 @@ export default async function LeaseEditPage({ params }: EditPageProps) {
   const { data: lease, error } = await supabase
     .from("leases")
     .select(
-      "id, room, tenant_name, first_contract_date, current_start_date, current_end_date, deposit, monthly_rent, payment_day, special_terms",
+      "id, room, tenant_name, first_contract_date, current_start_date, current_end_date, deposit, monthly_rent, management_fee, payment_day, special_terms",
     )
     .eq("id", id)
     .maybeSingle();
@@ -52,6 +52,7 @@ export default async function LeaseEditPage({ params }: EditPageProps) {
           currentEndDate: lease.current_end_date,
           deposit: String(lease.deposit),
           monthlyRent: String(lease.monthly_rent),
+          managementFee: String(lease.management_fee ?? 0),
           paymentDay: String(lease.payment_day),
           specialTerms: lease.special_terms ?? "",
         }}

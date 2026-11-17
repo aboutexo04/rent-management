@@ -132,7 +132,7 @@ export function LeaseEditForm({ leaseId, initialValues }: LeaseEditFormProps) {
           />
         </label>
         <label className="flex flex-col gap-1.5 text-sm text-zinc-700">
-          월 차임 (원)
+          월 임대료 (원)
           <input
             inputMode="numeric"
             className={fieldClass}
@@ -142,7 +142,22 @@ export function LeaseEditForm({ leaseId, initialValues }: LeaseEditFormProps) {
             onChange={(e) => update("monthlyRent", e.target.value)}
           />
         </label>
+        <label className="flex flex-col gap-1.5 text-sm text-zinc-700">
+          월 관리비 (원)
+          <input
+            inputMode="numeric"
+            className={fieldClass}
+            value={values.managementFee}
+            disabled={saving}
+            placeholder="없으면 0"
+            onChange={(e) => update("managementFee", e.target.value)}
+          />
+        </label>
       </div>
+      <p className="text-xs text-zinc-500">
+        연체·3기 차임 계산에는 (임대료+관리비)+부가세 10%를 합산합니다. 입력은
+        공급가액(부가세 별도) 기준입니다.
+      </p>
 
       <label className="flex flex-col gap-1.5 text-sm text-zinc-700">
         특약

@@ -10,7 +10,8 @@ export const LEASE_EXTRACT_MODEL = "claude-haiku-5-5";
 const EXTRACT_SYSTEM = `당신은 한국 상가 임대차 계약서에서 사실 필드만 추출하는 도우미입니다.
 법률 해석·조언은 하지 마세요.
 계약서에 보이는 값만 채우고, 없으면 빈 문자열("")을 쓰세요.
-날짜는 YYYY-MM-DD, 금액은 숫자만(원 단위), 납부일은 1~31 입니다.`;
+날짜는 YYYY-MM-DD, 금액은 숫자만(원 단위), 납부일은 1~31 입니다.
+monthlyRent는 월 임대료만(관리비 제외). managementFee는 월 관리비(없으면 "").`;
 
 const LEASE_JSON_SCHEMA = {
   type: "object",
@@ -23,6 +24,7 @@ const LEASE_JSON_SCHEMA = {
     "currentEndDate",
     "deposit",
     "monthlyRent",
+    "managementFee",
     "paymentDay",
     "specialTerms",
   ],
@@ -34,6 +36,7 @@ const LEASE_JSON_SCHEMA = {
     currentEndDate: { type: "string" },
     deposit: { type: "string" },
     monthlyRent: { type: "string" },
+    managementFee: { type: "string" },
     paymentDay: { type: "string" },
     specialTerms: { type: "string" },
   },
@@ -94,6 +97,7 @@ export function parseLeaseExtractJson(text: string): LeaseFormValues {
     currentEndDate: normalizeDate(parsed.currentEndDate),
     deposit: normalizeMoney(parsed.deposit),
     monthlyRent: normalizeMoney(parsed.monthlyRent),
+    managementFee: normalizeMoney(parsed.managementFee),
     paymentDay: normalizeDay(parsed.paymentDay),
     specialTerms: asString(parsed.specialTerms),
   };

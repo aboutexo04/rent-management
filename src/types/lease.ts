@@ -7,7 +7,10 @@ export type LeaseFormValues = {
   currentStartDate: string;
   currentEndDate: string;
   deposit: string;
+  /** 월 임대료(원) — 관리비 별도 */
   monthlyRent: string;
+  /** 월 관리비(원). 연체 계산 시 임대료와 합산 */
+  managementFee: string;
   paymentDay: string;
   specialTerms: string;
 };
@@ -20,6 +23,7 @@ export const EMPTY_LEASE_FORM: LeaseFormValues = {
   currentEndDate: "",
   deposit: "",
   monthlyRent: "",
+  managementFee: "",
   paymentDay: "",
   specialTerms: "",
 };

@@ -2,7 +2,7 @@ import { Suspense } from "react";
 import { connection } from "next/server";
 import Link from "next/link";
 import { createClient } from "@/lib/supabase/server";
-import { formatWon } from "@/lib/leases/validate";
+import { formatWon, monthlyCharge } from "@/lib/leases/validate";
 
 /** 세션 읽기 + Auth 토큰 만료 검사(Date.now) → 요청 시점에만 렌더 */
 export const instant = false;
@@ -24,7 +24,9 @@ async function AppHomeContent() {
 
   const { data: leases } = await supabase
     .from("leases")
-    .select("id, room, tenant_name, current_end_date, monthly_rent, created_at")
+    .select(
+      "id, room, tenant_name, current_end_date, monthly_rent, management_fee, created_at",
+    )
     .order("created_at", { ascending: false });
 
   return (
@@ -73,8 +75,13 @@ async function AppHomeContent() {
                     {lease.room} · {lease.tenant_name}
                   </span>
                   <span className="text-xs text-zinc-500">
-                    만료 {lease.current_end_date} · 월{" "}
-                    {formatWon(lease.monthly_rent)}
+                    만료 {lease.current_end_date} · 월 차임{" "}
+                    {formatWon(
+                      monthlyCharge(
+                        lease.monthly_rent,
+                        lease.management_fee ?? 0,
+                      ),
+                    )}
                   </span>
                 </Link>
               </li>

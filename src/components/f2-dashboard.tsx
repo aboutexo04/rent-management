@@ -1,4 +1,4 @@
-import { formatWon } from "@/lib/leases/validate";
+import { formatWon, monthlyCharge } from "@/lib/leases/validate";
 import {
   computeArrears,
   computeRenewalRefusalWindow,
@@ -14,6 +14,7 @@ type F2DashboardProps = {
     current_start_date: string;
     current_end_date: string;
     monthly_rent: number;
+    management_fee?: number | null;
     payment_day: number;
   };
   payments: {
@@ -33,6 +34,10 @@ export function F2Dashboard({ lease, payments }: F2DashboardProps) {
   const today = todayKst();
   const window = computeRenewalRefusalWindow(lease.current_end_date, today);
   const years = computeYearsElapsed(lease.first_contract_date, today);
+  const periodCharge = monthlyCharge(
+    lease.monthly_rent,
+    lease.management_fee ?? 0,
+  );
   const arrears = computeArrears({
     leaseStart: lease.current_start_date,
     today,
@@ -40,7 +45,7 @@ export function F2Dashboard({ lease, payments }: F2DashboardProps) {
     rentPeriods: [
       {
         effectiveFrom: lease.current_start_date,
-        monthlyRent: lease.monthly_rent,
+        monthlyRent: periodCharge,
       },
     ],
     payments: payments.map((p) => ({
@@ -93,6 +98,10 @@ export function F2Dashboard({ lease, payments }: F2DashboardProps) {
 
       <div className="flex flex-col gap-2 text-sm">
         <p className="font-medium text-zinc-900">차임 연체 (금액 기준)</p>
+        <p className="text-xs text-zinc-500">
+          월 차임(합산) {formatWon(periodCharge)} = (임대료 + 관리비) + 부가세
+          10%
+        </p>
         <p className="text-zinc-700">
           현재 연체액 <strong>{formatWon(arrears.currentArrears)}</strong> · 3기
           차임 {formatWon(arrears.threePeriodRent)}
