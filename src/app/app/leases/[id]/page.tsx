@@ -4,6 +4,10 @@ import { notFound } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import { formatWon, monthlyCharge, vatOf } from "@/lib/leases/validate";
 import { F2Dashboard } from "@/components/f2-dashboard";
+import {
+  EventTimeline,
+  type TimelineEvent,
+} from "@/components/event-timeline";
 
 export const instant = false;
 
@@ -30,11 +34,28 @@ export default async function LeaseDetailPage({
     notFound();
   }
 
-  const { data: payments } = await supabase
-    .from("payments")
-    .select("period_month, paid_on, amount")
-    .eq("lease_id", id)
-    .order("paid_on", { ascending: true });
+  const [{ data: payments }, { data: eventRows }] = await Promise.all([
+    supabase
+      .from("payments")
+      .select("period_month, paid_on, amount")
+      .eq("lease_id", id)
+      .order("paid_on", { ascending: true }),
+    supabase
+      .from("events")
+      .select(
+        "id, occurred_on, tag, memo, attachments(id, file_name, storage_path, content_type)",
+      )
+      .eq("lease_id", id)
+      .order("occurred_on", { ascending: false }),
+  ]);
+
+  const events: TimelineEvent[] = (eventRows ?? []).map((row) => ({
+    id: row.id,
+    occurred_on: row.occurred_on,
+    tag: row.tag,
+    memo: row.memo,
+    attachments: Array.isArray(row.attachments) ? row.attachments : [],
+  }));
 
   const managementFee = lease.management_fee ?? 0;
   const supply = lease.monthly_rent + managementFee;
@@ -111,7 +132,7 @@ export default async function LeaseDetailPage({
 
       <F2Dashboard lease={lease} payments={payments ?? []} />
 
-      <p className="text-sm text-zinc-400">다음: F3 사건 타임라인 (D5)</p>
+      <EventTimeline leaseId={lease.id} events={events} />
     </main>
   );
 }
