@@ -1,8 +1,9 @@
 "use client";
 
-import { useEffect, useState, type FormEvent } from "react";
+import { useEffect, useRef, useState, type FormEvent } from "react";
 import Link from "next/link";
 import { extractLeaseAction } from "@/app/actions/extract-lease";
+import { saveLeaseAction } from "@/app/actions/save-lease";
 import {
   EMPTY_LEASE_FORM,
   type LeaseFormValues,
@@ -15,6 +16,15 @@ type LeaseReviewFormProps = {
 
 type ExtractStatus = "idle" | "loading" | "done" | "failed";
 
+function isNextRedirect(err: unknown): boolean {
+  return (
+    !!err &&
+    typeof err === "object" &&
+    "digest" in err &&
+    String((err as { digest?: unknown }).digest).startsWith("NEXT_REDIRECT")
+  );
+}
+
 export function LeaseReviewForm({
   storagePath,
   fileName,
@@ -22,12 +32,18 @@ export function LeaseReviewForm({
   const [values, setValues] = useState<LeaseFormValues>(EMPTY_LEASE_FORM);
   const [extractStatus, setExtractStatus] = useState<ExtractStatus>("idle");
   const [extractMessage, setExtractMessage] = useState<string | null>(null);
-  const [info, setInfo] = useState<string | null>(null);
-
+  const [error, setError] = useState<string | null>(null);
+  const [saving, setSaving] = useState(false);
   const [retryKey, setRetryKey] = useState(0);
+  const userEditedRef = useRef(false);
+  const valuesRef = useRef(values);
+  valuesRef.current = values;
 
   useEffect(() => {
     let cancelled = false;
+    if (retryKey > 0) {
+      userEditedRef.current = false;
+    }
 
     async function run() {
       setExtractStatus("loading");
@@ -35,11 +51,17 @@ export function LeaseReviewForm({
       const result = await extractLeaseAction(storagePath, fileName);
       if (cancelled) return;
 
-      setValues(result.values);
+      if (!userEditedRef.current) {
+        setValues(result.values);
+        valuesRef.current = result.values;
+      }
+
       if (result.ok) {
         setExtractStatus("done");
         setExtractMessage(
-          "자동 추출 초안입니다. 저장 전에 반드시 확인하고 수정하세요. 추출값을 그대로 저장하지 마세요.",
+          userEditedRef.current
+            ? "추출이 끝났습니다. 이미 수정한 내용은 유지했습니다. 저장 전 한 번 더 확인하세요."
+            : "자동 추출 초안입니다. 저장 전에 반드시 확인하고 수정하세요. 추출값을 그대로 저장하지 마세요.",
         );
       } else {
         setExtractStatus("failed");
@@ -57,19 +79,37 @@ export function LeaseReviewForm({
     key: K,
     value: LeaseFormValues[K],
   ) {
-    setValues((prev) => ({ ...prev, [key]: value }));
+    userEditedRef.current = true;
+    setValues((prev) => {
+      const next = { ...prev, [key]: value };
+      valuesRef.current = next;
+      return next;
+    });
   }
 
-  function onSubmit(e: FormEvent) {
+  async function onSubmit(e: FormEvent) {
     e.preventDefault();
-    setInfo(
-      "DB 저장은 다음 단계(D3 오후)에서 연결합니다. 지금은 추출·수정만 확인하세요.",
-    );
+    setError(null);
+    setSaving(true);
+    try {
+      const result = await saveLeaseAction({
+        values: valuesRef.current,
+        storagePath,
+      });
+      if (result && !result.ok) {
+        setError(result.error);
+      }
+    } catch (err) {
+      if (isNextRedirect(err)) throw err;
+      setError("저장 중 오류가 발생했습니다. 다시 시도하세요.");
+    } finally {
+      setSaving(false);
+    }
   }
 
   const fieldClass =
     "rounded border border-zinc-300 bg-white px-3 py-2 text-zinc-900 outline-none focus:border-zinc-500";
-  const fieldsDisabled = extractStatus === "loading";
+  const fieldsDisabled = extractStatus === "loading" || saving;
 
   return (
     <form onSubmit={onSubmit} className="flex flex-col gap-5">
@@ -104,6 +144,7 @@ export function LeaseReviewForm({
             className={fieldClass}
             value={values.room}
             disabled={fieldsDisabled}
+            required
             onChange={(e) => update("room", e.target.value)}
           />
         </label>
@@ -113,6 +154,7 @@ export function LeaseReviewForm({
             className={fieldClass}
             value={values.tenantName}
             disabled={fieldsDisabled}
+            required
             onChange={(e) => update("tenantName", e.target.value)}
           />
         </label>
@@ -123,6 +165,7 @@ export function LeaseReviewForm({
             className={fieldClass}
             value={values.firstContractDate}
             disabled={fieldsDisabled}
+            required
             onChange={(e) => update("firstContractDate", e.target.value)}
           />
         </label>
@@ -135,6 +178,7 @@ export function LeaseReviewForm({
             className={fieldClass}
             value={values.paymentDay}
             disabled={fieldsDisabled}
+            required
             onChange={(e) => update("paymentDay", e.target.value)}
           />
         </label>
@@ -145,6 +189,7 @@ export function LeaseReviewForm({
             className={fieldClass}
             value={values.currentStartDate}
             disabled={fieldsDisabled}
+            required
             onChange={(e) => update("currentStartDate", e.target.value)}
           />
         </label>
@@ -155,6 +200,7 @@ export function LeaseReviewForm({
             className={fieldClass}
             value={values.currentEndDate}
             disabled={fieldsDisabled}
+            required
             onChange={(e) => update("currentEndDate", e.target.value)}
           />
         </label>
@@ -165,6 +211,7 @@ export function LeaseReviewForm({
             className={fieldClass}
             value={values.deposit}
             disabled={fieldsDisabled}
+            required
             onChange={(e) => update("deposit", e.target.value)}
           />
         </label>
@@ -175,6 +222,7 @@ export function LeaseReviewForm({
             className={fieldClass}
             value={values.monthlyRent}
             disabled={fieldsDisabled}
+            required
             onChange={(e) => update("monthlyRent", e.target.value)}
           />
         </label>
@@ -191,9 +239,9 @@ export function LeaseReviewForm({
         />
       </label>
 
-      {info ? (
-        <p className="rounded border border-amber-200 bg-amber-50 px-3 py-2 text-sm text-amber-900">
-          {info}
+      {error ? (
+        <p className="rounded border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-800">
+          {error}
         </p>
       ) : null}
 
@@ -203,7 +251,7 @@ export function LeaseReviewForm({
           disabled={fieldsDisabled}
           className="rounded bg-zinc-900 px-4 py-2.5 text-sm font-medium text-white hover:bg-zinc-800 disabled:opacity-60"
         >
-          저장 시도 (오후 단계에서 연결)
+          {saving ? "저장 중…" : "확인 후 저장"}
         </button>
         <button
           type="button"

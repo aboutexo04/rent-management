@@ -1,0 +1,91 @@
+import { connection } from "next/server";
+import Link from "next/link";
+import { notFound } from "next/navigation";
+import { createClient } from "@/lib/supabase/server";
+import { formatWon } from "@/lib/leases/validate";
+
+export const instant = false;
+
+type LeaseDetailPageProps = {
+  params: Promise<{ id: string }>;
+};
+
+export default async function LeaseDetailPage({
+  params,
+}: LeaseDetailPageProps) {
+  await connection();
+  const { id } = await params;
+  const supabase = await createClient();
+
+  const { data: lease, error } = await supabase
+    .from("leases")
+    .select(
+      "id, room, tenant_name, first_contract_date, current_start_date, current_end_date, deposit, monthly_rent, payment_day, special_terms, contract_storage_path, created_at",
+    )
+    .eq("id", id)
+    .maybeSingle();
+
+  if (error || !lease) {
+    notFound();
+  }
+
+  const rows: { label: string; value: string }[] = [
+    { label: "호실", value: lease.room },
+    { label: "임차인", value: lease.tenant_name },
+    { label: "최초 계약일", value: lease.first_contract_date },
+    { label: "현재 계약 시작일", value: lease.current_start_date },
+    { label: "현재 계약 만료일", value: lease.current_end_date },
+    { label: "보증금", value: formatWon(lease.deposit) },
+    { label: "월 차임", value: formatWon(lease.monthly_rent) },
+    { label: "납부일", value: `매월 ${lease.payment_day}일` },
+    {
+      label: "특약",
+      value: lease.special_terms?.trim() ? lease.special_terms : "없음",
+    },
+  ];
+
+  return (
+    <main className="flex flex-col gap-6">
+      <div className="flex flex-col gap-2">
+        <Link href="/app" className="text-sm text-zinc-500 underline">
+          ← 홈
+        </Link>
+        <h1 className="text-xl font-semibold text-zinc-900">
+          계약 상세 · {lease.room}
+        </h1>
+        <p className="text-sm text-zinc-600">
+          저장되었습니다. 법률 자문이 아니며, 기록 정리용입니다.
+        </p>
+      </div>
+
+      <dl className="divide-y divide-zinc-200 rounded border border-zinc-200 bg-white">
+        {rows.map((row) => (
+          <div
+            key={row.label}
+            className="grid gap-1 px-4 py-3 sm:grid-cols-[8rem_1fr] sm:gap-4"
+          >
+            <dt className="text-sm text-zinc-500">{row.label}</dt>
+            <dd className="whitespace-pre-wrap text-sm text-zinc-900">
+              {row.value}
+            </dd>
+          </div>
+        ))}
+      </dl>
+
+      {lease.contract_storage_path ? (
+        <p className="break-all text-xs text-zinc-400">
+          계약서 파일: {lease.contract_storage_path}
+        </p>
+      ) : null}
+
+      <Link
+        href={`/app/leases/${lease.id}/edit`}
+        className="inline-flex w-fit rounded border border-zinc-300 bg-white px-4 py-2.5 text-sm text-zinc-700 hover:bg-zinc-50"
+      >
+        계약 수정
+      </Link>
+
+      <p className="text-sm text-zinc-400">다음: F2 기한·연체 계산 (D4)</p>
+    </main>
+  );
+}

@@ -17,7 +17,8 @@ export default function LeaseReviewPage({ searchParams }: ReviewPageProps) {
         </Link>
         <h1 className="text-xl font-semibold text-zinc-900">계약 정보 확인</h1>
         <p className="text-sm text-zinc-600">
-          추출·저장 전 확인·수정 단계의 골격입니다.
+          추출 초안을 확인·수정한 뒤 저장하세요. 추출값이 자동으로 확정되지
+          않습니다.
         </p>
       </div>
 
