@@ -3,6 +3,7 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import { formatWon } from "@/lib/leases/validate";
+import { F2Dashboard } from "@/components/f2-dashboard";
 
 export const instant = false;
 
@@ -28,6 +29,12 @@ export default async function LeaseDetailPage({
   if (error || !lease) {
     notFound();
   }
+
+  const { data: payments } = await supabase
+    .from("payments")
+    .select("period_month, paid_on, amount")
+    .eq("lease_id", id)
+    .order("paid_on", { ascending: true });
 
   const rows: { label: string; value: string }[] = [
     { label: "호실", value: lease.room },
@@ -85,7 +92,9 @@ export default async function LeaseDetailPage({
         계약 수정
       </Link>
 
-      <p className="text-sm text-zinc-400">다음: F2 기한·연체 계산 (D4)</p>
+      <F2Dashboard lease={lease} payments={payments ?? []} />
+
+      <p className="text-sm text-zinc-400">다음: F3 사건 타임라인 (D5)</p>
     </main>
   );
 }

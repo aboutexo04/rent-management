@@ -19,6 +19,7 @@ cp .env.example .env.local
 
 npm install
 npm run dev
+npm test   # F2 기한·연체 단위 테스트
 ```
 
 [http://localhost:3000](http://localhost:3000) 에서 확인합니다.

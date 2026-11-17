@@ -83,7 +83,7 @@ async function AppHomeContent() {
         )}
       </section>
 
-      <p className="text-sm text-zinc-400">다음: F2 기한·연체 (D4)</p>
+      <p className="text-sm text-zinc-400">다음: F3 사건 타임라인 (D5)</p>
     </main>
   );
 }
