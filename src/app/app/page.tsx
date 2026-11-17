@@ -1,6 +1,5 @@
 import { Suspense } from "react";
 import { connection } from "next/server";
-import Link from "next/link";
 import { createClient } from "@/lib/supabase/server";
 import { monthlyCharge } from "@/lib/leases/validate";
 import { LeaseList } from "@/components/lease-list";
@@ -61,16 +60,7 @@ async function AppHomeContent() {
       </p>
 
       <section className="flex flex-col gap-3">
-        <div className="flex items-center justify-between gap-3">
-          <h2 className="text-sm font-medium text-zinc-900">등록된 계약</h2>
-          <Link
-            href="/app/leases/new"
-            className="rounded bg-zinc-900 px-3 py-1.5 text-sm font-medium text-white hover:bg-zinc-800"
-          >
-            계약 등록
-          </Link>
-        </div>
-
+        <h2 className="text-sm font-medium text-zinc-900">등록된 계약</h2>
         <LeaseList leases={items} />
       </section>
     </main>
