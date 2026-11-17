@@ -42,7 +42,7 @@ async function AppHomeContent() {
       >
         계약 등록하기
       </Link>
-      <p className="text-sm text-zinc-400">다음: LLM 추출 + 저장 (D3)</p>
+      <p className="text-sm text-zinc-400">다음: 확인한 계약 DB 저장 (D3 오후)</p>
     </main>
   );
 }

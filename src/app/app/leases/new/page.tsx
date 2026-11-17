@@ -15,8 +15,8 @@ export default function NewLeasePage() {
         </Link>
         <h1 className="text-xl font-semibold text-zinc-900">계약 등록</h1>
         <p className="text-sm text-zinc-600">
-          계약서 사진·PDF를 올리면 Storage에 저장한 뒤 확인 화면으로 이동합니다.
-          자동 추출은 다음 단계에서 붙입니다.
+          계약서 사진·PDF를 올리면 Storage에 저장한 뒤, 확인 화면에서 자동
+          추출(초안) → 수정합니다.
         </p>
       </div>
 

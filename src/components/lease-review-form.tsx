@@ -1,7 +1,8 @@
 "use client";
 
-import { useState, type FormEvent } from "react";
+import { useEffect, useState, type FormEvent } from "react";
 import Link from "next/link";
+import { extractLeaseAction } from "@/app/actions/extract-lease";
 import {
   EMPTY_LEASE_FORM,
   type LeaseFormValues,
@@ -12,12 +13,45 @@ type LeaseReviewFormProps = {
   fileName: string;
 };
 
+type ExtractStatus = "idle" | "loading" | "done" | "failed";
+
 export function LeaseReviewForm({
   storagePath,
   fileName,
 }: LeaseReviewFormProps) {
   const [values, setValues] = useState<LeaseFormValues>(EMPTY_LEASE_FORM);
+  const [extractStatus, setExtractStatus] = useState<ExtractStatus>("idle");
+  const [extractMessage, setExtractMessage] = useState<string | null>(null);
   const [info, setInfo] = useState<string | null>(null);
+
+  const [retryKey, setRetryKey] = useState(0);
+
+  useEffect(() => {
+    let cancelled = false;
+
+    async function run() {
+      setExtractStatus("loading");
+      setExtractMessage(null);
+      const result = await extractLeaseAction(storagePath, fileName);
+      if (cancelled) return;
+
+      setValues(result.values);
+      if (result.ok) {
+        setExtractStatus("done");
+        setExtractMessage(
+          "자동 추출 초안입니다. 저장 전에 반드시 확인하고 수정하세요. 추출값을 그대로 저장하지 마세요.",
+        );
+      } else {
+        setExtractStatus("failed");
+        setExtractMessage(result.error);
+      }
+    }
+
+    void run();
+    return () => {
+      cancelled = true;
+    };
+  }, [storagePath, fileName, retryKey]);
 
   function update<K extends keyof LeaseFormValues>(
     key: K,
@@ -29,12 +63,13 @@ export function LeaseReviewForm({
   function onSubmit(e: FormEvent) {
     e.preventDefault();
     setInfo(
-      "저장·LLM 추출은 다음 단계(D3)에서 연결합니다. 지금은 업로드·폼 골격만 확인하세요.",
+      "DB 저장은 다음 단계(D3 오후)에서 연결합니다. 지금은 추출·수정만 확인하세요.",
     );
   }
 
   const fieldClass =
     "rounded border border-zinc-300 bg-white px-3 py-2 text-zinc-900 outline-none focus:border-zinc-500";
+  const fieldsDisabled = extractStatus === "loading";
 
   return (
     <form onSubmit={onSubmit} className="flex flex-col gap-5">
@@ -44,10 +79,23 @@ export function LeaseReviewForm({
         <p className="mt-1 break-all text-xs text-zinc-400">{storagePath}</p>
       </div>
 
-      <p className="rounded border border-sky-200 bg-sky-50 px-3 py-2 text-sm text-sky-900">
-        LLM 자동 추출은 아직 없습니다. 아래 필드는 확인·수정용 골격이며, 지금은
-        수동으로 적어 볼 수 있습니다. 추출값을 그대로 저장하지 않습니다.
-      </p>
+      {extractStatus === "loading" ? (
+        <p className="rounded border border-zinc-200 bg-zinc-100 px-3 py-2 text-sm text-zinc-700">
+          계약서에서 정보를 추출하는 중…
+        </p>
+      ) : null}
+
+      {extractMessage ? (
+        <p
+          className={
+            extractStatus === "failed"
+              ? "rounded border border-amber-200 bg-amber-50 px-3 py-2 text-sm text-amber-900"
+              : "rounded border border-sky-200 bg-sky-50 px-3 py-2 text-sm text-sky-900"
+          }
+        >
+          {extractMessage}
+        </p>
+      ) : null}
 
       <div className="grid gap-4 sm:grid-cols-2">
         <label className="flex flex-col gap-1.5 text-sm text-zinc-700">
@@ -55,6 +103,7 @@ export function LeaseReviewForm({
           <input
             className={fieldClass}
             value={values.room}
+            disabled={fieldsDisabled}
             onChange={(e) => update("room", e.target.value)}
           />
         </label>
@@ -63,6 +112,7 @@ export function LeaseReviewForm({
           <input
             className={fieldClass}
             value={values.tenantName}
+            disabled={fieldsDisabled}
             onChange={(e) => update("tenantName", e.target.value)}
           />
         </label>
@@ -72,6 +122,7 @@ export function LeaseReviewForm({
             type="date"
             className={fieldClass}
             value={values.firstContractDate}
+            disabled={fieldsDisabled}
             onChange={(e) => update("firstContractDate", e.target.value)}
           />
         </label>
@@ -83,6 +134,7 @@ export function LeaseReviewForm({
             max={31}
             className={fieldClass}
             value={values.paymentDay}
+            disabled={fieldsDisabled}
             onChange={(e) => update("paymentDay", e.target.value)}
           />
         </label>
@@ -92,6 +144,7 @@ export function LeaseReviewForm({
             type="date"
             className={fieldClass}
             value={values.currentStartDate}
+            disabled={fieldsDisabled}
             onChange={(e) => update("currentStartDate", e.target.value)}
           />
         </label>
@@ -101,6 +154,7 @@ export function LeaseReviewForm({
             type="date"
             className={fieldClass}
             value={values.currentEndDate}
+            disabled={fieldsDisabled}
             onChange={(e) => update("currentEndDate", e.target.value)}
           />
         </label>
@@ -110,6 +164,7 @@ export function LeaseReviewForm({
             inputMode="numeric"
             className={fieldClass}
             value={values.deposit}
+            disabled={fieldsDisabled}
             onChange={(e) => update("deposit", e.target.value)}
           />
         </label>
@@ -119,6 +174,7 @@ export function LeaseReviewForm({
             inputMode="numeric"
             className={fieldClass}
             value={values.monthlyRent}
+            disabled={fieldsDisabled}
             onChange={(e) => update("monthlyRent", e.target.value)}
           />
         </label>
@@ -130,6 +186,7 @@ export function LeaseReviewForm({
           rows={4}
           className={fieldClass}
           value={values.specialTerms}
+          disabled={fieldsDisabled}
           onChange={(e) => update("specialTerms", e.target.value)}
         />
       </label>
@@ -143,9 +200,18 @@ export function LeaseReviewForm({
       <div className="flex flex-wrap gap-3">
         <button
           type="submit"
-          className="rounded bg-zinc-900 px-4 py-2.5 text-sm font-medium text-white hover:bg-zinc-800"
+          disabled={fieldsDisabled}
+          className="rounded bg-zinc-900 px-4 py-2.5 text-sm font-medium text-white hover:bg-zinc-800 disabled:opacity-60"
         >
-          저장 시도 (D3에서 연결)
+          저장 시도 (오후 단계에서 연결)
+        </button>
+        <button
+          type="button"
+          disabled={fieldsDisabled}
+          onClick={() => setRetryKey((n) => n + 1)}
+          className="rounded border border-zinc-300 bg-white px-4 py-2.5 text-sm text-zinc-700 hover:bg-zinc-50 disabled:opacity-60"
+        >
+          추출 다시 시도
         </button>
         <Link
           href="/app/leases/new"
